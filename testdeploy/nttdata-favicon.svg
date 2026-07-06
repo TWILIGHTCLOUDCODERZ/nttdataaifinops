@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#003087"/>
+  <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle"
+        font-family="Arial, sans-serif" font-weight="800" font-size="10"
+        fill="#FFFFFF" letter-spacing="0.5">NTT</text>
+  <text x="50%" y="72%" dominant-baseline="central" text-anchor="middle"
+        font-family="Arial, sans-serif" font-weight="700" font-size="7"
+        fill="#009FE3">DATA</text>
+</svg>
