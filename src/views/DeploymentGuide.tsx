@@ -11,11 +11,12 @@ interface StepProps {
   children: React.ReactNode;
 }
 
-function Step({ number, title, icon, color, children }: StepProps) {
+function Step({ number, title, icon, color = 'border-slate-500', children }: StepProps) {
+  const bgColor = color.replace('border-', 'bg-').replace(/-\d{3}$/, (m) => `${m}/20`);
   return (
     <div className={`border-l-4 ${color} pl-6 py-4 bg-slate-800/50 rounded-r-lg mb-6`}>
       <div className="flex items-center gap-3 mb-4">
-        <div className={`w-10 h-10 rounded-full ${color.replace('border-', 'bg-').replace('-500', '-500/20')} flex items-center justify-center text-white font-bold`}>
+        <div className={`w-10 h-10 rounded-full ${bgColor} flex items-center justify-center text-white font-bold`}>
           {number}
         </div>
         <div className="flex items-center gap-2">
@@ -327,12 +328,12 @@ az webapp browse --name nttdataAImalaysia --resource-group nttdata-rg
 # https://nttdataAImalaysia.azurewebsites.net`} />
           </Step>
 
-          {/* Step 9: GitHub Actions Secrets */}
+          {/* Step 11: GitHub Actions Secrets */}
           <Step
-            number={9}
+            number={11}
             title="Configure GitHub Actions Secrets"
-            icon={Github}
-            description="Set up secrets in your GitHub repository to enable CI/CD deployment to Azure. Two authentication methods are supported."
+            icon={<Github className="w-5 h-5 text-slate-300" />}
+            color="border-slate-400"
           >
             <div className="space-y-6">
               <p className="text-slate-300 text-sm">
