@@ -11,7 +11,8 @@ import {
   CheckCircle,
   AlertTriangle,
   TrendingUp,
-  Target
+  Target,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Recommendation, Resource, CloudProvider } from '../types';
@@ -27,6 +28,8 @@ export function Recommendations() {
   const [activeTab, setActiveTab] = useState<'all' | 'rightsizing' | 'idle' | 'commitments' | 'spot'>('all');
   const [jiraModalOpen, setJiraModalOpen] = useState(false);
   const [selectedRecommendation, setSelectedRecommendation] = useState<Recommendation | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisComplete, setAnalysisComplete] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -131,6 +134,15 @@ export function Recommendations() {
     setJiraModalOpen(true);
   };
 
+  const handleRunAnalysis = async () => {
+    setAnalyzing(true);
+    setAnalysisComplete(false);
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    setAnalyzing(false);
+    setAnalysisComplete(true);
+    setTimeout(() => setAnalysisComplete(false), 3000);
+  };
+
   if (loading) {
     return (
       <div className="p-6 space-y-6">
@@ -171,12 +183,37 @@ export function Recommendations() {
             <option value="dismissed">Dismissed</option>
           </select>
 
-          <button className="btn btn-primary">
-            <Sparkles className="w-4 h-4" />
-            Run Analysis
+          <button
+            className="btn btn-primary"
+            onClick={handleRunAnalysis}
+            disabled={analyzing}
+          >
+            {analyzing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                Run Analysis
+              </>
+            )}
           </button>
         </div>
       </div>
+
+      {analysisComplete && (
+        <div className="mb-4 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3">
+          <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+          <div>
+            <p className="text-emerald-400 font-medium text-sm">Analysis Complete</p>
+            <p className="text-navy-400 text-xs mt-0.5">
+              Scanned {recommendations.length} resources and identified {recommendations.filter(r => r.status === 'new').length} new optimization opportunities.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

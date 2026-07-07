@@ -1,143 +1,197 @@
-# NTT DATA FinOps Dashboard - Azure Deployment Guide
+# NTT DATA FinOps Dashboard — Azure Deployment Guide
 
-**Target Region:** Southeast Asia
-**Existing App Service Plan:** sunway-plan (sunway-rg, Linux)
-**App Name:** nttdatamalaysia
+**App Name:** `nttdataAImalaysia`
+**Resource Group:** `nttdata-rg`
+**App Service Plan:** `nttdata-plan`
+**Key Vault:** `nttdataMALAYSIAkeyvault`
+**Region:** Southeast Asia (southeastasia)
+**Runtime:** Node 22 LTS (Linux)
+**Live URL:** `https://nttdataAImalaysia.azurewebsites.net`
 
----
-
-## Prerequisites
-
-1. Azure CLI installed: `az --version`
-2. Node.js 20+ installed: `node --version`
-3. Project cloned locally and `npm ci` has run
-
-> **Note:** All commands in this guide are for **PowerShell on Windows**. The `--%` syntax is used to escape the `|` character in runtime strings.
+> All commands are in **Azure CLI format** for PowerShell on Windows.
+> Run them in order from your project root directory.
 
 ---
 
-## Step 1: Login to Azure
+## PART 1 — FIRST-TIME AZURE SETUP
+*Run this section only once.*
+
+---
+
+### Step 1 — Login to Azure
 
 ```powershell
 az login
 ```
 
-A browser window will open. Sign in with your Azure credentials.
-
-**Verify subscription:**
+Confirm the correct subscription is active:
 
 ```powershell
 az account show --query "{name:name, id:id}" -o table
 ```
 
-**If multiple subscriptions, set the correct one:**
+Switch subscription if needed:
 
 ```powershell
-az account set --subscription "YOUR_SUBSCRIPTION_NAME"
+az account set --subscription "YOUR_SUBSCRIPTION_NAME_OR_ID"
 ```
 
 ---
 
-## Step 2: Create Key Vault for Secrets
-
-**Create Key Vault:**
+### Step 2 — Create Resource Group
 
 ```powershell
-az keyvault create --name nttdatamykeyvault --resource-group sunway-rg --location southeastasia --sku standard
-```
-
-**Store Supabase URL:**
-
-```powershell
-az keyvault secret set --vault-name nttdatamykeyvault --name VITE-SUPABASE-URL --value "https://aixorspllmwhjemtwboi.supabase.co"
-```
-
-**Store Supabase Anon Key:**
-
-```powershell
-az keyvault secret set --vault-name nttdatamykeyvault --name VITE-SUPABASE-ANON-KEY --value "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpeG9yc3BsbG13aGplbXR3Ym9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2MjIwMjIsImV4cCI6MjA5NzE5ODAyMn0.FAbqXtSpn38arxb_IjaBKumfpUCCIhqvDHe2ZrM-kqs"
-```
-
-**Verify secrets:**
-
-```powershell
-az keyvault secret list --vault-name nttdatamykeyvault -o table
+az group create --name nttdata-rg --location southeastasia
 ```
 
 ---
 
-## Step 3: Create Web App (Using Existing Plan)
-
-The existing plan is Linux-based. In PowerShell, use `--%` to escape the pipe character:
+### Step 3 — Create App Service Plan (Linux)
 
 ```powershell
-az webapp create --name nttdatamalaysia --resource-group sunway-rg --plan sunway-plan --% --runtime "NODE|22-lts"
-```
-
-**Verify app creation:**
-
-```powershell
-az webapp show --name nttdatamalaysia --resource-group sunway-rg --query defaultHostName -o tsv
-```
-
-Output should be: `nttdatamalaysia.azurewebsites.net`
-
----
-
-## Step 4: Enable Managed Identity & Grant Key Vault Access
-
-**Enable system-assigned managed identity:**
-
-```powershell
-az webapp identity assign --name nttdatamalaysia --resource-group sunway-rg
-```
-
-**Get the Principal ID:**
-
-```powershell
-$PRINCIPAL_ID = az webapp identity show --name nttdatamalaysia --resource-group sunway-rg --query principalId -o tsv
-
-Write-Host "Principal ID: $PRINCIPAL_ID"
-```
-
-**Grant Key Vault permissions:**
-
-```powershell
-az keyvault set-policy --name nttdatamykeyvault --object-id $PRINCIPAL_ID --secret-permissions get list
+az appservice plan create --name nttdata-plan --resource-group nttdata-rg --location southeastasia --sku B1 --is-linux
 ```
 
 ---
 
-## Step 5: Build the Application Locally
-
-**Important:** Vite bakes environment variables into the JS bundle at build time. You must build with secrets present.
-
-**Export secrets from Key Vault:**
+### Step 4 — Create the Web App
 
 ```powershell
-$env:VITE_SUPABASE_URL = az keyvault secret show --vault-name nttdatamykeyvault --name VITE-SUPABASE-URL --query value -o tsv
-
-$env:VITE_SUPABASE_ANON_KEY = az keyvault secret show --vault-name nttdatamykeyvault --name VITE-SUPABASE-ANON-KEY --query value -o tsv
+az webapp create --name nttdataAImalaysia --resource-group nttdata-rg --plan nttdata-plan --runtime "NODE|22-lts"
 ```
 
-**Verify exports:**
+Verify the app was created:
 
 ```powershell
-Write-Host "SUPABASE_URL: $env:VITE_SUPABASE_URL"
+az webapp show --name nttdataAImalaysia --resource-group nttdata-rg --query "{state:state, url:defaultHostName}" -o table
 ```
 
-**Install dependencies and build:**
+---
+
+### Step 5 — Create Key Vault
+
+```powershell
+az keyvault create --name nttdataMALAYSIAkeyvault --resource-group nttdata-rg --location southeastasia --sku standard
+```
+
+---
+
+### Step 6 — Store Secrets in Key Vault
+
+```powershell
+az keyvault secret set --vault-name nttdataMALAYSIAkeyvault --name VITE-Database-URL --value "YOUR_SUPABASE_URL"
+```
+
+```powershell
+az keyvault secret set --vault-name nttdataMALAYSIAkeyvault --name VITE-Database-ANON-KEY --value "YOUR_SUPABASE_ANON_KEY"
+```
+
+Confirm both secrets are stored:
+
+```powershell
+az keyvault secret list --vault-name nttdataMALAYSIAkeyvault --query "[].name" -o table
+```
+
+---
+
+### Step 7 — Enable Managed Identity on Web App
+
+```powershell
+az webapp identity assign --name nttdataAImalaysia --resource-group nttdata-rg
+```
+
+Get the Principal ID:
+
+```powershell
+az webapp identity show --name nttdataAImalaysia --resource-group nttdata-rg --query principalId -o tsv
+```
+
+Copy the output value, then grant it read access to Key Vault (replace `PRINCIPAL_ID_HERE` with the copied value):
+
+```powershell
+az keyvault set-policy --name nttdataMALAYSIAkeyvault --object-id PRINCIPAL_ID_HERE --secret-permissions get list
+```
+
+---
+
+### Step 8 — Configure Web App Settings
+
+```powershell
+az webapp config appsettings set --name nttdataAImalaysia --resource-group nttdata-rg --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false WEBSITE_RUN_FROM_PACKAGE=0 WEBSITES_PORT=8080
+```
+
+Set the startup command:
+
+```powershell
+az webapp config set --name nttdataAImalaysia --resource-group nttdata-rg --startup-file "npx serve /home/site/wwwroot -l 8080"
+```
+
+---
+
+### Step 9 — Get Publish Profile (for GitHub Actions CI/CD)
+
+```powershell
+az webapp deployment list-publishing-profiles --name nttdataAImalaysia --resource-group nttdata-rg --xml --output tsv
+```
+
+Copy the entire output. Add it to GitHub:
+
+- Go to your GitHub repo → **Settings** → **Secrets and variables** → **Actions**
+- Add secret `AZURE_PUBLISH_PROFILE` — paste the output
+- Add secret `AZURE_WEBAPP_NAME` — value: `nttdataAImalaysia`
+- Add secret `VITE_SUPABASE_URL` — value: your database URL from Key Vault
+- Add secret `VITE_SUPABASE_ANON_KEY` — value: your anon key from Key Vault
+
+After this, every push to `main` branch deploys automatically.
+
+---
+
+## PART 2 — MANUAL DEPLOY (every release)
+*Use this when deploying manually without GitHub Actions.*
+
+---
+
+### Step 1 — Navigate to project folder
+
+```powershell
+cd C:\path\to\your\project
+```
+
+---
+
+### Step 2 — Pull secrets from Key Vault into local environment
+
+```powershell
+$env:VITE_SUPABASE_URL = az keyvault secret show --vault-name nttdataMALAYSIAkeyvault --name VITE-Database-URL --query value -o tsv
+```
+
+```powershell
+$env:VITE_SUPABASE_ANON_KEY = az keyvault secret show --vault-name nttdataMALAYSIAkeyvault --name VITE-Database-ANON-KEY --query value -o tsv
+```
+
+Confirm secrets loaded:
+
+```powershell
+Write-Host "URL loaded: $env:VITE_SUPABASE_URL"
+```
+
+---
+
+### Step 3 — Install dependencies and build
 
 ```powershell
 npm ci
+```
+
+```powershell
 npm run build
 ```
 
 ---
 
-## Step 6: Create Deployment Package
+### Step 4 — Package the build into a zip
 
-The zip must contain the **contents** of `dist/` at the root level (not a `dist/` subfolder), so that `index.html` is at the zip root. Use PowerShell's `Push-Location` + `Compress-Archive` pattern:
+The zip must contain files directly at the root — `index.html` must NOT be inside a `dist/` subfolder.
 
 ```powershell
 Push-Location dist
@@ -145,183 +199,152 @@ Compress-Archive -Path * -DestinationPath ..\deploy.zip -Force
 Pop-Location
 ```
 
-> **Why this matters:** If you zip the `dist/` folder itself, Azure extracts it to `wwwroot/dist/` and can't find `index.html` at the expected root path.
-
----
-
-## Step 7: Disable Server-Side Build (One-Time Setup)
-
-This prevents Kudu from running `npm install`/`npm build` on the server. Run once:
+Verify zip structure (`index.html` must appear at root level):
 
 ```powershell
-az webapp config appsettings set --name nttdatamalaysia --resource-group sunway-rg --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false WEBSITE_RUN_FROM_PACKAGE=0
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+[System.IO.Compression.ZipFile]::OpenRead("$PWD\deploy.zip").Entries | Select-Object FullName | Select-Object -First 6
 ```
 
----
-
-## Step 8: Set Startup Command (One-Time Setup)
-
-The app runs on Linux with a Node.js runtime. `serve` is the correct tool to serve static files with proper MIME types and SPA routing. The `serve.json` in the build output configures SPA fallback automatically.
-
-```powershell
-az webapp config set --name nttdatamalaysia --resource-group sunway-rg --startup-file "npx serve /home/site/wwwroot -l 8080"
+Expected output:
+```
+FullName
+--------
+index.html
+web.config
+serve.json
+assets/index-XXXX.css
+assets/index-XXXX.js
 ```
 
 ---
 
-## Step 9: Deploy to Azure Web App
-
-> **Important:** Use `az webapp deploy` with `--type zip`. Do **not** use the old `az webapp deployment source config-zip` command — it triggers a server-side build that will fail.
+### Step 5 — Deploy to Azure
 
 ```powershell
-az webapp deploy --name nttdatamalaysia --resource-group sunway-rg --src-path ..\deploy.zip --type zip
-```
-
-**Clean up:**
-
-```powershell
-Remove-Item ..\deploy.zip
+az webapp deploy --name nttdataAImalaysia --resource-group nttdata-rg --src-path .\deploy.zip --type zip
 ```
 
 ---
 
-## Step 10: Browse Your Application
+### Step 6 — Clean up and restart
 
 ```powershell
-az webapp browse --name nttdatamalaysia --resource-group sunway-rg
+Remove-Item .\deploy.zip
 ```
 
-**Or open manually:**
-
+```powershell
+az webapp restart --name nttdataAImalaysia --resource-group nttdata-rg
 ```
-https://nttdatamalaysia.azurewebsites.net
+
+Wait 30 seconds, then open the app:
+
+```powershell
+Start-Process "https://nttdataAImalaysia.azurewebsites.net"
 ```
 
 ---
 
-## Step 11: Configure Custom Domain (Optional)
+## PART 3 — VERIFY THE DEPLOYMENT
 
-**Add custom domain:**
-
-```powershell
-az webapp config hostname add --hostname finops.yourdomain.com --webapp-name nttdatamalaysia --resource-group sunway-rg
-```
-
-**Enable HTTPS only:**
+Check app is running:
 
 ```powershell
-az webapp update --name nttdatamalaysia --resource-group sunway-rg --set httpsOnly=true
+az webapp show --name nttdataAImalaysia --resource-group nttdata-rg --query "{state:state, url:defaultHostName}" -o table
 ```
 
----
-
-## GitHub Actions CI/CD Setup
-
-### 10.1: Get Publish Profile
+Stream live logs:
 
 ```powershell
-az webapp deployment list-publishing-profiles --name nttdatamalaysia --resource-group sunway-rg --xml --output tsv | Out-File -FilePath publish-profile.xml -Encoding utf8
-
-Get-Content publish-profile.xml
+az webapp log tail --name nttdataAImalaysia --resource-group nttdata-rg
 ```
 
-Copy the entire XML output.
+Confirm startup command is correct:
 
-### 10.2: Add GitHub Secrets
+```powershell
+az webapp config show --name nttdataAImalaysia --resource-group nttdata-rg --query "appCommandLine" -o tsv
+```
 
-Go to: **GitHub Repo** → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+Confirm app settings:
 
-| Secret Name | Value |
-|-------------|-------|
-| `AZURE_WEBAPP_NAME` | `nttdatamalaysia` |
-| `AZURE_PUBLISH_PROFILE` | Paste full XML from above |
-| `VITE_SUPABASE_URL` | `https://aixorspllmwhjemtwboi.supabase.co` |
-| `VITE_SUPABASE_ANON_KEY` | Your Supabase anon key |
-
-### 10.3: Push to Deploy
-
-Every push to `main` branch will automatically build and deploy.
-
-```bash
-git add .
-git commit -m "Configure Azure deployment"
-git push origin main
+```powershell
+az webapp config appsettings list --name nttdataAImalaysia --resource-group nttdata-rg -o table
 ```
 
 ---
 
-## Troubleshooting
+## PART 4 — TROUBLESHOOTING
 
-### View Logs
-
-```powershell
-az webapp log tail --name nttdatamalaysia --resource-group sunway-rg
-```
-
-### Restart App
-
-```powershell
-az webapp restart --name nttdatamalaysia --resource-group sunway-rg
-```
-
-### Check App Status
-
-```powershell
-az webapp show --name nttdatamalaysia --resource-group sunway-rg --query "{state:state, defaultHostName:defaultHostName}" -o table
-```
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Blank white page | JS files returning 404 | Confirm `index.html` is at zip root, not inside a `dist/` folder |
+| MIME type errors for `.js` | Wrong serving mode | Confirm startup command is `npx serve /home/site/wwwroot -l 8080` |
+| Page refresh gives 404 | SPA routing not configured | Confirm `serve.json` is present in the zip |
+| "Application Error" on load | Startup command crashed | Run `az webapp log tail` and check for errors |
+| Data not loading | Database keys missing from build | Re-run Step 2 of Part 2 in the same PowerShell window, then rebuild |
+| App stuck after deploy | Old process still running | Run `az webapp restart` and wait 30 seconds |
 
 ---
 
-## Quick Reference - All Commands (PowerShell)
+## PART 5 — COMPLETE COPY-PASTE SCRIPTS
 
-**Copy and paste in PowerShell:**
+### First-Time Setup Script (run once)
 
 ```powershell
-# 1. Login
 az login
 
-# 2. Create Key Vault and store secrets
-az keyvault create --name nttdatamykeyvault --resource-group sunway-rg --location southeastasia --sku standard
+az account show --query "{name:name, id:id}" -o table
 
-az keyvault secret set --vault-name nttdatamykeyvault --name VITE-SUPABASE-URL --value "https://aixorspllmwhjemtwboi.supabase.co"
+az group create --name nttdata-rg --location southeastasia
 
-az keyvault secret set --vault-name nttdatamykeyvault --name VITE-SUPABASE-ANON-KEY --value "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpeG9yc3BsbG13aGplbXR3Ym9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2MjIwMjIsImV4cCI6MjA5NzE5ODAyMn0.FAbqXtSpn38arxb_IjaBKumfpUCCIhqvDHe2ZrM-kqs"
+az appservice plan create --name nttdata-plan --resource-group nttdata-rg --location southeastasia --sku B1 --is-linux
 
-# 3. Create Web App using existing plan (use --% to escape pipe in PowerShell)
-az webapp create --name nttdatamalaysia --resource-group sunway-rg --plan sunway-plan --% --runtime "NODE|22-lts"
+az webapp create --name nttdataAImalaysia --resource-group nttdata-rg --plan nttdata-plan --runtime "NODE|22-lts"
 
-# 4. Enable managed identity
-az webapp identity assign --name nttdatamalaysia --resource-group sunway-rg
+az keyvault create --name nttdataMALAYSIAkeyvault --resource-group nttdata-rg --location southeastasia --sku standard
 
-$PRINCIPAL_ID = az webapp identity show --name nttdatamalaysia --resource-group sunway-rg --query principalId -o tsv
+az keyvault secret set --vault-name nttdataMALAYSIAkeyvault --name VITE-Database-URL --value "YOUR_SUPABASE_URL"
 
-az keyvault set-policy --name nttdatamykeyvault --object-id $PRINCIPAL_ID --secret-permissions get list
+az keyvault secret set --vault-name nttdataMALAYSIAkeyvault --name VITE-Database-ANON-KEY --value "YOUR_SUPABASE_ANON_KEY"
 
-# 5. Build locally
-$env:VITE_SUPABASE_URL = az keyvault secret show --vault-name nttdatamykeyvault --name VITE-SUPABASE-URL --query value -o tsv
-$env:VITE_SUPABASE_ANON_KEY = az keyvault secret show --vault-name nttdatamykeyvault --name VITE-SUPABASE-ANON-KEY --query value -o tsv
+az webapp identity assign --name nttdataAImalaysia --resource-group nttdata-rg
+
+az webapp identity show --name nttdataAImalaysia --resource-group nttdata-rg --query principalId -o tsv
+
+az keyvault set-policy --name nttdataMALAYSIAkeyvault --object-id PRINCIPAL_ID_HERE --secret-permissions get list
+
+az webapp config appsettings set --name nttdataAImalaysia --resource-group nttdata-rg --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false WEBSITE_RUN_FROM_PACKAGE=0 WEBSITES_PORT=8080
+
+az webapp config set --name nttdataAImalaysia --resource-group nttdata-rg --startup-file "npx serve /home/site/wwwroot -l 8080"
+
+Write-Host "First-time setup complete."
+```
+
+---
+
+### Every Deploy Script (run each release)
+
+```powershell
+$env:VITE_SUPABASE_URL = az keyvault secret show --vault-name nttdataMALAYSIAkeyvault --name VITE-Database-URL --query value -o tsv
+
+$env:VITE_SUPABASE_ANON_KEY = az keyvault secret show --vault-name nttdataMALAYSIAkeyvault --name VITE-Database-ANON-KEY --query value -o tsv
 
 npm ci
+
 npm run build
 
-# 6. Create deployment package (zip dist/ CONTENTS so index.html is at zip root)
 Push-Location dist
 Compress-Archive -Path * -DestinationPath ..\deploy.zip -Force
 Pop-Location
 
-# 7. Disable server-side build (one-time, run once ever)
-az webapp config appsettings set --name nttdatamalaysia --resource-group sunway-rg --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false WEBSITE_RUN_FROM_PACKAGE=0
+az webapp deploy --name nttdataAImalaysia --resource-group nttdata-rg --src-path .\deploy.zip --type zip
 
-# 8. Set startup command (one-time, run once ever)
-az webapp config set --name nttdatamalaysia --resource-group sunway-rg --startup-file "npx serve /home/site/wwwroot -l 8080"
+Remove-Item .\deploy.zip
 
-# 9. Deploy
-az webapp deploy --name nttdatamalaysia --resource-group sunway-rg --src-path ..\deploy.zip --type zip
+az webapp restart --name nttdataAImalaysia --resource-group nttdata-rg
 
-Remove-Item ..\deploy.zip
-
-# 10. Browse
-az webapp browse --name nttdatamalaysia --resource-group sunway-rg
+Write-Host "Deployed successfully."
+Start-Process "https://nttdataAImalaysia.azurewebsites.net"
 ```
 
 ---
@@ -330,12 +353,9 @@ az webapp browse --name nttdatamalaysia --resource-group sunway-rg
 
 | Resource | Name | Resource Group | Region |
 |----------|------|----------------|--------|
-| App Service Plan | sunway-plan | sunway-rg | Southeast Asia |
-| Web App | nttdatamalaysia | sunway-rg | Southeast Asia |
-| Key Vault | nttdatamykeyvault | sunway-rg | Southeast Asia |
+| Resource Group | `nttdata-rg` | — | Southeast Asia |
+| App Service Plan | `nttdata-plan` | `nttdata-rg` | Southeast Asia |
+| Web App | `nttdataAImalaysia` | `nttdata-rg` | Southeast Asia |
+| Key Vault | `nttdataMALAYSIAkeyvault` | `nttdata-rg` | Southeast Asia |
 
----
-
-## App URL
-
-**Production:** `https://nttdatamalaysia.azurewebsites.net`
+**Live URL: https://nttdataAImalaysia.azurewebsites.net**

@@ -15,7 +15,8 @@ import {
   Lock,
   Send,
   Plus,
-  MoreVertical
+  MoreVertical,
+  FolderKanban
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { BudgetPolicy, CostAnomaly, CloudProvider } from '../types';
@@ -90,10 +91,11 @@ export function Governance() {
   ];
 
   const alertChannels = [
-    { name: 'Email', icon: Send, configured: true, destinations: ['finops@nttdata.com', 'cloud@nttdata.com'] },
-    { name: 'Slack', icon: Bell, configured: true, destinations: ['#cloud-costs', '#finops-alerts'] },
+    { name: 'Jira', icon: FolderKanban, configured: true, destinations: ['FINOPS Project', 'Cloud Cost Board'] },
+    { name: 'Email', icon: Send, configured: false, destinations: [] },
+    { name: 'Slack', icon: Bell, configured: false, destinations: [] },
     { name: 'Microsoft Teams', icon: Users, configured: false, destinations: [] },
-    { name: 'Webhook', icon: Send, configured: true, destinations: ['https://webhook.site/finops'] },
+    { name: 'Webhook', icon: Send, configured: false, destinations: [] },
   ];
 
   return (

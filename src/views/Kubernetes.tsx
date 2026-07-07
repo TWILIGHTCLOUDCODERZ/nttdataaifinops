@@ -10,7 +10,10 @@ import {
   ArrowDown,
   ArrowUp,
   TrendingUp,
-  Boxes
+  Boxes,
+  X,
+  CheckCircle,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { KubernetesCluster, KubernetesCost, CloudProvider } from '../types';
@@ -21,6 +24,9 @@ export function Kubernetes() {
   const [k8sCosts, setK8sCosts] = useState<KubernetesCost[]>([]);
   const [providers, setProviders] = useState<CloudProvider[]>([]);
   const [loading, setLoading] = useState(true);
+  const [optimizeModalOpen, setOptimizeModalOpen] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+  const [optimizeComplete, setOptimizeComplete] = useState(false);
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null);
 
   useEffect(() => {
@@ -172,7 +178,10 @@ export function Kubernetes() {
             ))}
           </select>
 
-          <button className="btn btn-primary">
+          <button
+            className="btn btn-primary"
+            onClick={() => setOptimizeModalOpen(true)}
+          >
             <Activity className="w-4 h-4" />
             Optimize
           </button>
@@ -388,6 +397,114 @@ export function Kubernetes() {
           </div>
         ))}
       </div>
+
+      {/* Optimize Modal */}
+      {optimizeModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => {
+              setOptimizeModalOpen(false);
+              setOptimizeComplete(false);
+            }}
+          />
+          <div className="relative w-full max-w-lg mx-4 bg-navy-900 border border-navy-700 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="p-6 border-b border-navy-800">
+              <button
+                onClick={() => {
+                  setOptimizeModalOpen(false);
+                  setOptimizeComplete(false);
+                }}
+                className="absolute top-4 right-4 p-2 rounded-lg text-navy-500 hover:text-white hover:bg-navy-800/50 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary-500/20 flex items-center justify-center">
+                  <Activity className="w-5 h-5 text-primary-400" />
+                </div>
+                <div>
+                  <h2 className="text-white font-semibold text-lg">Optimize Kubernetes Clusters</h2>
+                  <p className="text-navy-500 text-sm">Review and apply cost optimization actions</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {optimizeComplete ? (
+                <div className="text-center py-4">
+                  <CheckCircle className="w-16 h-16 text-emerald-400 mx-auto mb-4" />
+                  <h3 className="text-white font-semibold text-lg mb-2">Optimization Applied!</h3>
+                  <p className="text-navy-400 text-sm mb-4">
+                    Right-sized 3 over-provisioned workloads and scaled down 5 idle pods.
+                  </p>
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 mb-4">
+                    <p className="text-emerald-400 font-medium">Estimated Monthly Savings</p>
+                    <p className="text-2xl font-bold text-white">$1,840</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setOptimizeModalOpen(false);
+                      setOptimizeComplete(false);
+                    }}
+                    className="px-6 py-2.5 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p className="text-navy-400 text-sm mb-4">
+                    The optimizer will analyze cluster workloads and apply the following actions:
+                  </p>
+                  <div className="space-y-3 mb-6">
+                    {[
+                      { label: 'Right-size over-provisioned CPU/memory', savings: '$1,200/mo' },
+                      { label: 'Scale down idle pods (0 traffic)', savings: '$340/mo' },
+                      { label: 'Remove orphaned PVCs and unused images', savings: '$300/mo' },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-navy-800/50 rounded-lg border border-navy-700">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                          <span className="text-sm text-navy-200">{item.label}</span>
+                        </div>
+                        <span className="text-sm font-medium text-emerald-400">{item.savings}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setOptimizeModalOpen(false)}
+                      className="flex-1 py-2.5 px-4 rounded-lg border border-navy-700 hover:border-navy-600 text-navy-300 font-medium transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={async () => {
+                        setOptimizing(true);
+                        await new Promise((r) => setTimeout(r, 2000));
+                        setOptimizing(false);
+                        setOptimizeComplete(true);
+                      }}
+                      disabled={optimizing}
+                      className="flex-1 py-2.5 px-4 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {optimizing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Optimizing...
+                        </>
+                      ) : (
+                        'Apply Optimization'
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

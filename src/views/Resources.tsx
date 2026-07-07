@@ -184,9 +184,17 @@ export function Resources() {
             <Download className="w-4 h-4" />
             Export CSV
           </button>
-          <button className="btn btn-primary">
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              setSearchQuery('');
+              setTypeFilter('all');
+              setStatusFilter('all');
+              setProviderFilter('all');
+            }}
+          >
             <Filter className="w-4 h-4" />
-            Filter
+            Clear Filters
           </button>
         </div>
       </div>
